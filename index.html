@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>VITALGUARD AI</title>
+  <link rel="stylesheet" href="assets/styles.css" />
+</head>
+<body>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand"><div class="shield">🛡️</div><div><h1>VITALGUARD</h1><span>AI Health Intelligence</span></div></div>
+      <nav>
+        <a class="active" href="#dashboard">⌂ Dashboard</a>
+        <a href="#sensors">◉ Live Sensors</a>
+        <a href="#risk">⚠ Risk Analysis</a>
+        <a href="#forecast">⌁ Forecast</a>
+        <a href="#whatif">↗ What‑If</a>
+        <a href="#recommendations">✦ Recommendations</a>
+      </nav>
+      <div class="api-box">
+        <div class="small">BACKEND</div>
+        <div id="apiStatus" class="status-dot-row"><span class="dot offline"></span><span>Checking API...</span></div>
+        <input id="apiUrl" value="http://127.0.0.1:8000" />
+        <button class="secondary" id="saveApi">Save API URL</button>
+      </div>
+    </aside>
+
+    <main>
+      <header>
+        <div><p class="eyebrow">REAL-TIME MONITORING</p><h2>VITALGUARD AI Command Center</h2></div>
+        <div class="header-actions">
+          <span id="lastUpdated">Waiting for data</span>
+          <button id="demoBtn">Demo Mode</button>
+          <button class="primary" id="refreshBtn">↻ Refresh</button>
+        </div>
+      </header>
+
+      <section class="hero" id="dashboard">
+        <div>
+          <span class="live-pill"><i></i> LIVE SYSTEM</span>
+          <h3>Connected health and environment intelligence</h3>
+          <p>Hardware sensors and rPPG observations are visualized here when your backend publishes live data.</p>
+        </div>
+        <div class="overall-risk">
+          <span>OVERALL RISK</span>
+          <strong id="overallRisk">--</strong>
+          <small id="overallConfidence">Confidence: --</small>
+        </div>
+      </section>
+
+      <section class="grid metrics" id="sensors">
+        <article class="card"><span class="icon">♥</span><div><p>Heart Rate</p><h3 id="heartRate">-- <small>bpm</small></h3><span id="rppgStatus">rPPG waiting</span></div></article>
+        <article class="card"><span class="icon">◌</span><div><p>Temperature</p><h3 id="temperature">-- <small>°C</small></h3><span id="tempSource">Hardware waiting</span></div></article>
+        <article class="card"><span class="icon">💧</span><div><p>Humidity</p><h3 id="humidity">-- <small>%</small></h3><span>Environment sensor</span></div></article>
+        <article class="card"><span class="icon">🔥</span><div><p>Heat Index</p><h3 id="heatIndex">-- <small>°C</small></h3><span>Calculated / sensor data</span></div></article>
+      </section>
+
+      <section class="grid two">
+        <article class="panel hardware">
+          <div class="panel-head"><div><p class="eyebrow">CONNECTIONS</p><h3>Hardware & AI Sources</h3></div><span id="hardwareBadge" class="badge neutral">Unknown</span></div>
+          <div class="connection-row"><span class="dot" id="espDot"></span><div><strong>ESP32 + Environment Sensor</strong><small id="espText">Waiting for backend</small></div></div>
+          <div class="connection-row"><span class="dot" id="rppgDot"></span><div><strong>Camera rPPG Observation</strong><small id="rppgText">Waiting for backend</small></div></div>
+          <div class="connection-row"><span class="dot" id="fusionDot"></span><div><strong>Sensor Fusion Engine</strong><small id="fusionText">Waiting for backend</small></div></div>
+        </article>
+
+        <article class="panel" id="risk">
+          <div class="panel-head"><div><p class="eyebrow">AI DECISION</p><h3>Risk Assessment</h3></div></div>
+          <div class="risk-layout">
+            <div class="gauge"><div class="gauge-inner"><strong id="riskScore">--</strong><span>/ 100</span></div></div>
+            <div><h4 id="riskLabel">No assessment yet</h4><p id="riskExplanation">Connect the FastAPI backend and publish sensor/rPPG observations.</p><div class="confidence-bar"><span id="confidenceFill"></span></div><small id="confidenceText">Confidence: --</small></div>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid two">
+        <article class="panel" id="forecast">
+          <div class="panel-head"><div><p class="eyebrow">FORECAST</p><h3>Predicted Trend</h3></div></div>
+          <div id="forecastContent" class="empty">No forecast available yet.</div>
+        </article>
+        <article class="panel" id="recommendations">
+          <div class="panel-head"><div><p class="eyebrow">GUIDANCE</p><h3>Recommendations</h3></div></div>
+          <ul id="recommendationList" class="recommendations"><li>Waiting for AI recommendations...</li></ul>
+        </article>
+      </section>
+
+      <section class="panel whatif" id="whatif">
+        <div class="panel-head"><div><p class="eyebrow">SIMULATION</p><h3>What‑If Analysis</h3></div><button class="primary" id="simulateBtn">Run Simulation</button></div>
+        <div class="controls">
+          <label>Temperature <input id="wiTemp" type="range" min="15" max="50" value="30"><output id="wiTempOut">30°C</output></label>
+          <label>Humidity <input id="wiHumidity" type="range" min="10" max="100" value="60"><output id="wiHumidityOut">60%</output></label>
+          <label>Heart Rate <input id="wiHr" type="range" min="40" max="180" value="75"><output id="wiHrOut">75 bpm</output></label>
+        </div>
+        <div id="whatifResult" class="empty">Adjust values and run a simulation.</div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head"><div><p class="eyebrow">RAW OBSERVATION</p><h3>Latest Backend Payload</h3></div></div>
+        <pre id="rawData">{}</pre>
+      </section>
+    </main>
+  </div>
+  <script src="assets/app.js"></script>
+</body>
+</html>
