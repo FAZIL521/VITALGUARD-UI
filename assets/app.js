@@ -9,9 +9,7 @@ const $ = (id) => document.getElementById(id);
 // API CONFIGURATION
 // ------------------------------------------------------------
 
-let apiBase =
-    localStorage.getItem("vitalguard_api") ||
-    $("apiUrl").value ||
+let apiBase=localStorage.getItem("vitalguard_api")||"https://vitalguard-ai-backend.onrender.com";||
     "http://127.0.0.1:8000";
 
 apiBase = apiBase.replace(/\/$/, "");
