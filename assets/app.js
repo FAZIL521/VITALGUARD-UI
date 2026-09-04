@@ -1,1239 +1,438 @@
-// ============================================================
-// VITALGUARD AI - FRONTEND APPLICATION
-// Connects Member 3 UI to Team 4 FastAPI AI Backend
-// ============================================================
-
 const $ = (id) => document.getElementById(id);
 
-// ------------------------------------------------------------
-// API CONFIGURATION
-// ------------------------------------------------------------
-
-let apiBase=localStorage.getItem("vitalguard_api")||"https://vitalguard-ai-backend.onrender.com";||
-    "http://127.0.0.1:8000";
-
-apiBase = apiBase.replace(/\/$/, "");
+let apiBase = localStorage.getItem("vitalguard_api");
+if (!apiBase) {
+    apiBase = "https://vitalguard-ai-backend.onrender.com";
+}
 
 $("apiUrl").value = apiBase;
 
 let demo = false;
-let latestData = null;
 
-
-// ------------------------------------------------------------
-// HELPERS
-// ------------------------------------------------------------
-
-function val(value, fallback = "--") {
-    return value === undefined ||
-           value === null ||
-           value === ""
-        ? fallback
-        : value;
+function val(v, fallback = "--") {
+    if (v === undefined || v === null || v === "") {
+        return fallback;
+    }
+    return v;
 }
-
 
 function boolDot(id, ok) {
-    const element = $(id);
-
-    if (!element) return;
-
-    element.className = "dot " + (ok ? "online" : "offline");
+    const e = $(id);
+    if (!e) return;
+    e.className = "dot " + (ok ? "online" : "offline");
 }
 
-
 function setRisk(score, label, confidence) {
-
     score = Number(score ?? 0);
 
-    const safeScore = Math.max(
-        0,
-        Math.min(100, score)
-    );
+    const deg = Math.max(0, Math.min(100, score)) * 3.6;
 
-    const degrees = safeScore * 3.6;
+    $("riskScore").textContent = val(score);
+    $("overallRisk").textContent = label || "--";
+    $("riskLabel").textContent = label || "No assessment yet";
 
-    const confidenceValue =
-        Number(confidence ?? 0);
+    let confidenceDisplay = "--";
 
-    $("riskScore").textContent =
-        safeScore.toFixed(1);
-
-    $("overallRisk").textContent =
-        label || "--";
-
-    $("riskLabel").textContent =
-        label || "No assessment yet";
+    if (confidence !== undefined && confidence !== null) {
+        confidenceDisplay = Number(confidence) <= 1
+            ? Math.round(Number(confidence) * 100)
+            : Math.round(Number(confidence));
+    }
 
     $("overallConfidence").textContent =
-        `Confidence: ${confidenceValue.toFixed(1)}%`;
+        "Confidence: " + confidenceDisplay + "%";
 
     $("confidenceText").textContent =
-        `Confidence: ${confidenceValue.toFixed(1)}%`;
+        "Confidence: " + confidenceDisplay + "%";
 
     $("confidenceFill").style.width =
-        `${Math.max(0, Math.min(100, confidenceValue))}%`;
+        Math.max(0, Math.min(100, Number(confidenceDisplay) || 0)) + "%";
 
-    const gauge =
-        document.querySelector(".gauge");
+    const gauge = document.querySelector(".gauge");
 
     if (gauge) {
         gauge.style.background =
-            `conic-gradient(
-                #3478f6 0deg,
-                #3478f6 ${degrees}deg,
-                #1b2a42 ${degrees}deg
-            )`;
+            "conic-gradient(#3478f6 0deg, #3478f6 " +
+            deg +
+            "deg, #1b2a42 " +
+            deg +
+            "deg)";
     }
 }
 
-
-// ------------------------------------------------------------
-// FORECAST DISPLAY
-// ------------------------------------------------------------
-
-function renderForecast(forecast) {
-
-    const container = $("forecastContent");
-
-    if (!container) return;
-
-    let points = [];
-
-    if (Array.isArray(forecast)) {
-        points = forecast;
-    }
-    else if (Array.isArray(forecast.points)) {
-        points = forecast.points;
-    }
-    else if (Array.isArray(forecast.forecast)) {
-        points = forecast.forecast;
-    }
-
-    if (!points.length) {
-
-        const summary =
-            forecast.summary ||
-            forecast.prediction ||
-            "";
-
-        container.textContent =
-            summary || "No forecast available yet.";
-
-        return;
-    }
-
-    const maxRisk = 100;
-
-    container.innerHTML = `
-        <div style="
-            display:flex;
-            flex-direction:column;
-            gap:14px;
-            width:100%;
-        ">
-            ${points.map(point => {
-
-                const minutes =
-                    Number(point.minutes ?? 0);
-
-                const risk =
-                    Math.max(
-                        0,
-                        Math.min(
-                            maxRisk,
-                            Number(point.risk ?? 0)
-                        )
-                    );
-
-                return `
-                    <div style="
-                        display:grid;
-                        grid-template-columns:70px 1fr 55px;
-                        align-items:center;
-                        gap:12px;
-                    ">
-
-                        <span>
-                            +${minutes} min
-                        </span>
-
-                        <div style="
-                            height:10px;
-                            background:#1b2a42;
-                            border-radius:10px;
-                            overflow:hidden;
-                        ">
-                            <div style="
-                                width:${risk}%;
-                                height:100%;
-                                background:#3478f6;
-                                border-radius:10px;
-                                transition:width .3s ease;
-                            "></div>
-                        </div>
-
-                        <strong>
-                            ${risk.toFixed(1)}
-                        </strong>
-
-                    </div>
-                `;
-
-            }).join("")}
-        </div>
-    `;
-}
-
-
-// ------------------------------------------------------------
-// RECOMMENDATIONS
-// ------------------------------------------------------------
-
-function renderRecommendations(recommendations) {
-
-    const list = $("recommendationList");
-
-    if (!list) return;
-
-    if (!Array.isArray(recommendations) ||
-        recommendations.length === 0) {
-
-        list.innerHTML =
-            "<li>No recommendations available.</li>";
-
-        return;
-    }
-
-    list.innerHTML =
-        recommendations
-            .map(item => {
-
-                if (typeof item === "string") {
-                    return `<li>${item}</li>`;
-                }
-
-                return `
-                    <li>
-                        ${item.text || JSON.stringify(item)}
-                    </li>
-                `;
-
-            })
-            .join("");
-}
-
-
-// ------------------------------------------------------------
-// MAIN DATA RENDERER
-// ------------------------------------------------------------
-
-function render(data) {
-
-    latestData = data;
-
-    const environment =
-        data.environment ||
-        data.env ||
-        {};
-
-    const rppg =
-        data.rppg ||
-        {};
-
-    const vitals =
-        data.vitals ||
-        {};
-
-    const hardware =
-        data.hardware ||
-        {};
-
-    const risk =
-        data.risk ||
-        data.risk_analysis ||
-        {};
-
-    const forecast =
-        data.forecast ||
-        {};
-
-
-    // --------------------------------------------------------
-    // SENSOR VALUES
-    // --------------------------------------------------------
-
-    const heartRate =
-        vitals.heart_rate ??
-        rppg.heart_rate ??
-        rppg.bpm;
-
-    const bodyTemperature =
-        vitals.body_temperature ??
-        environment.body_temperature;
-
-    const spo2 =
-        vitals.spo2;
-
-
-    $("heartRate").innerHTML =
-        `${val(heartRate)}
-        <small>bpm</small>`;
-
+function render(d) {
+    const env = d.environment || d.env || {};
+    const rppg = d.rppg || d.vitals || {};
+    const hardware = d.hardware || {};
+    const risk = d.risk || d.risk_analysis || {};
+    const forecast = d.forecast || {};
 
     $("temperature").innerHTML =
-        `${val(environment.temperature)}
-        <small>°C</small>`;
-
+        val(env.temperature) + " <small>°C</small>";
 
     $("humidity").innerHTML =
-        `${val(environment.humidity)}
-        <small>%</small>`;
-
+        val(env.humidity) + " <small>%</small>";
 
     $("heatIndex").innerHTML =
-        `${val(environment.heat_index)}
-        <small>°C</small>`;
+        val(env.heat_index) + " <small>°C</small>";
 
+    const hr =
+        rppg.heart_rate !== undefined
+            ? rppg.heart_rate
+            : rppg.bpm;
 
-    // --------------------------------------------------------
-    // SENSOR STATUS
-    // --------------------------------------------------------
-
-    const rppgQuality =
-        rppg.quality;
-
-    if (rppgQuality !== undefined) {
-
-        if (typeof rppgQuality === "number") {
-
-            $("rppgStatus").textContent =
-                `rPPG Quality: ${rppgQuality.toFixed(2)}`;
-
-        } else {
-
-            $("rppgStatus").textContent =
-                `rPPG Quality: ${rppgQuality}`;
-
-        }
-
-    } else {
-
-        $("rppgStatus").textContent =
-            "rPPG observation";
-
-    }
-
+    $("heartRate").innerHTML =
+        val(hr) + " <small>bpm</small>";
 
     $("tempSource").textContent =
-        environment.source ||
-        "Environment backend";
+        env.source || "Environment backend";
 
+    $("rppgStatus").textContent =
+        rppg.quality || rppg.status || "rPPG observation";
 
-    // --------------------------------------------------------
-    // HARDWARE CONNECTIONS
-    // --------------------------------------------------------
+    const esp = Boolean(hardware.esp32_connected);
+    const cam = Boolean(hardware.rppg_connected);
+    const fus = hardware.fusion_available !== false;
 
-    const esp32Connected =
-        hardware.esp32_connected ??
-        false;
-
-
-    const rppgConnected =
-        hardware.rppg_connected ??
-        rppg.available ??
-        false;
-
-
-    const fusionAvailable =
-        hardware.fusion_available ??
-        true;
-
-
-    boolDot(
-        "espDot",
-        esp32Connected
-    );
-
-
-    boolDot(
-        "rppgDot",
-        rppgConnected
-    );
-
-
-    boolDot(
-        "fusionDot",
-        fusionAvailable
-    );
-
+    boolDot("espDot", esp);
+    boolDot("rppgDot", cam);
+    boolDot("fusionDot", fus);
 
     $("espText").textContent =
-        esp32Connected
+        esp
             ? "Connected and sending data"
             : "Disconnected / no data";
 
-
     $("rppgText").textContent =
-        rppgConnected
+        cam
             ? "Observation active"
             : "Camera/rPPG unavailable";
 
-
     $("fusionText").textContent =
-        fusionAvailable
+        fus
             ? "Fusion processing available"
             : "Fusion unavailable";
 
-
     $("hardwareBadge").textContent =
-        esp32Connected || rppgConnected
-            ? "ACTIVE"
-            : "OFFLINE";
+        esp || cam ? "ACTIVE" : "OFFLINE";
 
+    let riskScore = risk.risk_score;
 
-    // --------------------------------------------------------
-    // RISK
-    // --------------------------------------------------------
-
-    let confidence =
-        risk.confidence ??
-        data.confidence;
-
-
-    // Backend may return 0.835
-    // UI displays percentage 83.5
-    if (confidence !== undefined &&
-        Number(confidence) <= 1) {
-
-        confidence =
-            Number(confidence) * 100;
-
+    if (riskScore === undefined) {
+        riskScore = risk.score;
     }
 
+    let riskLevel = risk.risk_level;
 
-    setRisk(
-        risk.score ??
-        risk.risk_score,
+    if (!riskLevel) {
+        riskLevel = risk.level;
+    }
 
-        risk.level ??
-        risk.label,
+    let confidence = risk.confidence;
 
-        confidence
-    );
+    if (
+        confidence === undefined &&
+        d.confidence &&
+        d.confidence.score !== undefined
+    ) {
+        confidence = d.confidence.score;
+    }
 
-
-    // --------------------------------------------------------
-    // RISK EXPLANATION
-    // --------------------------------------------------------
+    setRisk(riskScore, riskLevel, confidence);
 
     $("riskExplanation").textContent =
         risk.explanation ||
-        data.explanation?.summary ||
+        d.explanation?.summary ||
         "Waiting for AI explanation.";
 
+    const rec = d.recommendations || risk.recommended_actions || [];
 
-    // --------------------------------------------------------
-    // RECOMMENDATIONS
-    // --------------------------------------------------------
+    if (rec.length) {
+        $("recommendationList").innerHTML = rec
+            .map(function (x) {
+                if (typeof x === "string") {
+                    return "<li>" + x + "</li>";
+                }
 
-    renderRecommendations(
-        data.recommendations ||
-        risk.recommended_actions ||
-        []
-    );
+                return "<li>" +
+                    (x.text || JSON.stringify(x)) +
+                    "</li>";
+            })
+            .join("");
+    } else {
+        $("recommendationList").innerHTML =
+            "<li>No recommendations available.</li>";
+    }
 
-
-    // --------------------------------------------------------
-    // FORECAST
-    // --------------------------------------------------------
-
-    renderForecast(forecast);
-
-
-    // --------------------------------------------------------
-    // RAW BACKEND DATA
-    // --------------------------------------------------------
+    if (forecast.points && forecast.points.length) {
+        $("forecastContent").textContent =
+            forecast.points
+                .map(function (p) {
+                    return p.minutes + " min → " + p.risk;
+                })
+                .join("\n");
+    } else {
+        $("forecastContent").textContent =
+            forecast.summary ||
+            forecast.prediction ||
+            JSON.stringify(forecast, null, 2);
+    }
 
     $("rawData").textContent =
-        JSON.stringify(
-            data,
-            null,
-            2
-        );
-
-
-    // --------------------------------------------------------
-    // UPDATE TIME
-    // --------------------------------------------------------
+        JSON.stringify(d, null, 2);
 
     $("lastUpdated").textContent =
-        "Updated: " +
-        new Date().toLocaleTimeString();
+        "Updated: " + new Date().toLocaleTimeString();
 }
 
-
-// ------------------------------------------------------------
-// DEMO DATA
-// ------------------------------------------------------------
-
 function demoData() {
-
     return {
-
         available: true,
 
-        timestamp:
-            new Date().toISOString(),
-
         environment: {
-
             temperature: 31.2,
-
             humidity: 68.4,
-
             heat_index: 36.1,
-
             available: true,
-
             source: "ESP32+DHT11"
-
         },
 
         rppg: {
-
             heart_rate: 82,
-
-            quality: 0.92,
-
-            available: true
-
-        },
-
-        vitals: {
-
-            heart_rate: 82,
-
-            spo2: 98,
-
-            body_temperature: 36.7,
-
-            activity_level: "resting"
-
+            available: true,
+            quality: "good"
         },
 
         hardware: {
-
             esp32_connected: true,
-
             rppg_connected: true,
-
             fusion_available: true
-
         },
 
         risk: {
-
-            score: 42,
-
-            level: "MODERATE",
-
-            confidence: 87,
-
+            risk_score: 42,
+            risk_level: "MODERATE",
+            confidence: 0.87,
             explanation:
-                "Elevated heat exposure combined with a higher-than-baseline heart rate."
-
+                "Elevated heat index combined with a higher-than-baseline heart rate."
         },
 
         forecast: {
-
             points: [
-
-                {
-                    minutes: 10,
-                    risk: 44
-                },
-
-                {
-                    minutes: 20,
-                    risk: 47
-                },
-
-                {
-                    minutes: 30,
-                    risk: 51
-                }
-
+                { minutes: 10, risk: 42 },
+                { minutes: 20, risk: 45 },
+                { minutes: 30, risk: 48 }
             ]
-
         },
 
         recommendations: [
-
             "Hydrate with water.",
-
             "Move to a cooler environment.",
-
             "Continue monitoring heart rate."
-
-        ],
-
-        data_source:
-            "DEMO"
-
+        ]
     };
 }
-
-
-// ------------------------------------------------------------
-// FETCH LIVE BACKEND DATA
-// ------------------------------------------------------------
 
 async function fetchData() {
 
     if (demo) {
-
-        $("apiStatus").innerHTML =
-            '<span class="dot online"></span>' +
-            '<span>Demo Mode</span>';
-
-        render(
-            demoData()
-        );
-
+        render(demoData());
         return;
     }
 
-
     $("apiStatus").innerHTML =
-        '<span class="dot"></span>' +
-        '<span>Connecting...</span>';
-
+        '<span class="dot"></span><span>Connecting...</span>';
 
     try {
 
-        // Primary endpoint used by your backend
         const endpoints = [
-
             "/api/live",
-
-            // Compatibility fallbacks
             "/live",
-
             "/status",
-
             "/api/status"
-
         ];
 
+        let data = null;
 
-        let responseData = null;
-
-
-        for (const endpoint of endpoints) {
+        for (const ep of endpoints) {
 
             try {
 
-                const response =
-                    await fetch(
-                        apiBase + endpoint,
-                        {
-                            method: "GET",
-                            cache: "no-store"
-                        }
-                    );
+                const res = await fetch(apiBase + ep);
 
-
-                if (response.ok) {
-
-                    responseData =
-                        await response.json();
-
+                if (res.ok) {
+                    data = await res.json();
                     break;
-
                 }
 
             } catch (error) {
-
-                console.log(
-                    "Endpoint failed:",
-                    endpoint
-                );
-
+                console.error("Endpoint failed:", apiBase + ep, error);
             }
-
         }
 
-
-        if (!responseData) {
-
-            throw new Error(
-                "No compatible backend endpoint found."
-            );
-
+        if (!data) {
+            throw new Error("No compatible backend endpoint responded.");
         }
 
+        $("apiStatus").innerHTML =
+            '<span class="dot online"></span><span>API connected</span>';
+
+        render(data);
+
+    } catch (e) {
+
+        console.error("VITALGUARD API ERROR:", e);
 
         $("apiStatus").innerHTML =
-            '<span class="dot online"></span>' +
-            '<span>API connected</span>';
-
-
-        render(
-            responseData
-        );
-
-
-    } catch (error) {
-
-        console.error(
-            "Backend connection error:",
-            error
-        );
-
-
-        $("apiStatus").innerHTML =
-            '<span class="dot offline"></span>' +
-            '<span>API unavailable</span>';
-
+            '<span class="dot offline"></span><span>API unavailable</span>';
 
         $("lastUpdated").textContent =
             "Backend unavailable";
     }
 }
 
+$("saveApi").onclick = function () {
 
-// ------------------------------------------------------------
-// SAVE API URL
-// ------------------------------------------------------------
-
-$("saveApi").onclick = () => {
-
-    apiBase =
-        $("apiUrl")
-            .value
-            .trim()
-            .replace(/\/$/, "");
-
-
-    if (!apiBase) {
-
-        apiBase =
-            "http://127.0.0.1:8000";
-
-        $("apiUrl").value =
-            apiBase;
-
-    }
-
+    apiBase = $("apiUrl")
+        .value
+        .trim()
+        .replace(/\/+$/, "");
 
     localStorage.setItem(
         "vitalguard_api",
         apiBase
     );
 
-
     fetchData();
 };
 
+$("refreshBtn").onclick = fetchData;
 
-// ------------------------------------------------------------
-// REFRESH
-// ------------------------------------------------------------
-
-$("refreshBtn").onclick =
-    fetchData;
-
-
-// ------------------------------------------------------------
-// DEMO MODE
-// ------------------------------------------------------------
-
-$("demoBtn").onclick = () => {
+$("demoBtn").onclick = function () {
 
     demo = !demo;
 
-
     $("demoBtn").textContent =
-        demo
-            ? "Live Mode"
-            : "Demo Mode";
-
+        demo ? "Live Mode" : "Demo Mode";
 
     fetchData();
 };
 
+const sliders = [
+    "wiTemp",
+    "wiHumidity",
+    "wiHr"
+];
 
-// ------------------------------------------------------------
-// WHAT-IF SLIDERS
-// ------------------------------------------------------------
+sliders.forEach(function (id) {
 
-["wiTemp", "wiHumidity", "wiHr"]
-    .forEach(id => {
+    const element = $(id);
 
-        const slider =
-            $(id);
+    if (!element) return;
 
-        const output =
-            $(id + "Out");
+    element.oninput = function () {
 
+        const output = $(id + "Out");
 
-        if (!slider || !output) {
-            return;
+        if (!output) return;
+
+        let suffix = "";
+
+        if (id === "wiTemp") {
+            suffix = "°C";
+        } else if (id === "wiHumidity") {
+            suffix = "%";
+        } else {
+            suffix = " bpm";
         }
 
-
-        slider.oninput = () => {
-
-            if (id === "wiTemp") {
-
-                output.textContent =
-                    slider.value + "°C";
-
-            }
-
-            else if (id === "wiHumidity") {
-
-                output.textContent =
-                    slider.value + "%";
-
-            }
-
-            else {
-
-                output.textContent =
-                    slider.value + " bpm";
-
-            }
-
-        };
-
-    });
-
-
-// ------------------------------------------------------------
-// WHAT-IF SIMULATION
-// ------------------------------------------------------------
-
-$("simulateBtn").onclick =
-    async () => {
-
-        const ambientTemperature =
-            Number(
-                $("wiTemp").value
-            );
-
-
-        const humidity =
-            Number(
-                $("wiHumidity").value
-            );
-
-
-        const heartRate =
-            Number(
-                $("wiHr").value
-            );
-
-
-        // ----------------------------------------------------
-        // Make sure we have current live data
-        // ----------------------------------------------------
-
-        if (!latestData ||
-            !latestData.vitals) {
-
-            $("whatifResult").textContent =
-                "No live backend data available. Refresh the dashboard first.";
-
-            return;
-
-        }
-
-
-        const environment =
-            latestData.environment ||
-            {};
-
-
-        const rppg =
-            latestData.rppg ||
-            {};
-
-
-        const vitals =
-            latestData.vitals ||
-            {};
-
-
-        // ----------------------------------------------------
-        // BUILD EXACT BACKEND REQUEST
-        // ----------------------------------------------------
-
-        const payload = {
-
-            data: {
-
-                timestamp:
-                    latestData.timestamp ||
-                    new Date().toISOString(),
-
-
-                heart_rate:
-                    Number(
-                        vitals.heart_rate ??
-                        rppg.heart_rate ??
-                        104
-                    ),
-
-
-                spo2:
-                    Number(
-                        vitals.spo2 ??
-                        95
-                    ),
-
-
-                body_temperature:
-                    Number(
-                        vitals.body_temperature ??
-                        37.2
-                    ),
-
-
-                ambient_temperature:
-                    Number(
-                        environment.temperature ??
-                        36
-                    ),
-
-
-                humidity:
-                    Number(
-                        environment.humidity ??
-                        75
-                    ),
-
-
-                activity_level:
-                    vitals.activity_level ||
-                    "walking",
-
-
-                rppg_quality:
-                    Number(
-                        rppg.quality
-                    ) || 0.8,
-
-
-                sensor_quality:
-                    Number(
-                        latestData.sensor_quality
-                    ) || 0.87
-
-            },
-
-
-            changes: {
-
-                ambient_temperature:
-                    ambientTemperature,
-
-                humidity:
-                    humidity,
-
-                heart_rate:
-                    heartRate
-
-            }
-
-        };
-
-
-        // ----------------------------------------------------
-        // DEMO MODE
-        // ----------------------------------------------------
-
-        if (demo) {
-
-            const score =
-                Math.min(
-                    100,
-                    Math.max(
-                        0,
-                        Math.round(
-
-                            (ambientTemperature - 20) * 2 +
-
-                            (humidity - 30) * 0.4 +
-
-                            Math.max(
-                                0,
-                                heartRate - 70
-                            ) * 0.7
-
-                        )
-                    )
-                );
-
-
-            let level =
-                "LOW";
-
-
-            if (score >= 70) {
-
-                level =
-                    "HIGH";
-
-            }
-
-            else if (score >= 40) {
-
-                level =
-                    "MODERATE";
-
-            }
-
-
-            $("whatifResult").innerHTML = `
-
-                <strong>
-                    Predicted Risk: ${score}/100
-                </strong>
-
-                <br>
-
-                Risk Level:
-                <strong>${level}</strong>
-
-                <br>
-
-                <small>
-                    Demo simulation
-                </small>
-
-            `;
-
-            return;
-
-        }
-
-
-        // ----------------------------------------------------
-        // CALL BACKEND
-        // ----------------------------------------------------
-
-        $("whatifResult").textContent =
-            "Running AI simulation...";
-
-
-        try {
-
-            let response = null;
-
-
-            // First try the endpoint expected by UI
-            try {
-
-                response =
-                    await fetch(
-                        apiBase + "/whatif",
-                        {
-
-                            method: "POST",
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json"
-
-                            },
-
-                            body:
-                                JSON.stringify(
-                                    payload
-                                )
-
-                        }
-                    );
-
-            }
-
-            catch (error) {
-
-                console.log(
-                    "Trying /what-if fallback..."
-                );
-
-            }
-
-
-            // If /whatif doesn't work,
-            // try original backend endpoint
-            if (!response ||
-                !response.ok) {
-
-                response =
-                    await fetch(
-                        apiBase + "/what-if",
-                        {
-
-                            method: "POST",
-
-                            headers: {
-
-                                "Content-Type":
-                                    "application/json"
-
-                            },
-
-                            body:
-                                JSON.stringify(
-                                    payload
-                                )
-
-                        }
-                    );
-
-            }
-
-
-            if (!response.ok) {
-
-                throw new Error(
-                    "HTTP " +
-                    response.status
-                );
-
-            }
-
-
-            const result =
-                await response.json();
-
-
-            // ------------------------------------------------
-            // RESULT VALUES
-            // ------------------------------------------------
-
-            const predictedRisk =
-                Number(
-                    result.predicted_risk ??
-                    result.risk_score ??
-                    0
-                );
-
-
-            const riskLevel =
-                result.risk_level ??
-                result.level ??
-                "--";
-
-
-            let confidence =
-                Number(
-                    result.confidence ??
-                    0
-                );
-
-
-            if (confidence <= 1) {
-
-                confidence *= 100;
-
-            }
-
-
-            // ------------------------------------------------
-            // DISPLAY RESULT
-            // ------------------------------------------------
-
-            $("whatifResult").innerHTML = `
-
-                <div style="
-                    display:flex;
-                    flex-direction:column;
-                    gap:8px;
-                ">
-
-                    <div style="
-                        font-size:20px;
-                        font-weight:700;
-                    ">
-
-                        Predicted Risk:
-                        ${predictedRisk.toFixed(1)}
-                        / 100
-
-                    </div>
-
-
-                    <div>
-
-                        Risk Level:
-                        <strong>
-                            ${riskLevel}
-                        </strong>
-
-                    </div>
-
-
-                    <div>
-
-                        Confidence:
-                        ${confidence.toFixed(1)}%
-
-                    </div>
-
-
-                    <div style="
-                        margin-top:8px;
-                        padding:10px;
-                        background:#111f35;
-                        border-radius:8px;
-                    ">
-
-                        Simulation:
-
-                        ${ambientTemperature}°C,
-                        ${humidity}% humidity,
-                        ${heartRate} bpm
-
-                    </div>
-
-                </div>
-
-            `;
-
-
-        } catch (error) {
-
-            console.error(
-                "What-If simulation error:",
-                error
-            );
-
-
-            $("whatifResult").textContent =
-                "What-If simulation failed. Check that the FastAPI backend is running.";
-
-        }
-
+        output.textContent =
+            element.value + suffix;
+    };
+});
+
+$("simulateBtn").onclick = async function () {
+
+    const payload = {
+        temperature: Number($("wiTemp").value),
+        humidity: Number($("wiHumidity").value),
+        heart_rate: Number($("wiHr").value)
     };
 
+    if (demo) {
 
-// ------------------------------------------------------------
-// INITIAL LOAD
-// ------------------------------------------------------------
+        const score = Math.min(
+            100,
+            Math.round(
+                (payload.temperature - 20) * 2 +
+                (payload.humidity - 30) * 0.4 +
+                Math.max(0, payload.heart_rate - 70) * 0.7
+            )
+        );
+
+        $("whatifResult").textContent =
+            "Demo result: predicted risk score " +
+            score +
+            "/100.";
+
+        return;
+    }
+
+    try {
+
+        const current = {
+            timestamp: new Date().toISOString(),
+            heart_rate: payload.heart_rate,
+            spo2: 95,
+            body_temperature: 37.2,
+            ambient_temperature: payload.temperature,
+            humidity: payload.humidity,
+            activity_level: "walking",
+            rppg_quality: 0.8,
+            sensor_quality: 0.87
+        };
+
+        const requestBody = {
+            data: current,
+            changes: {
+                ambient_temperature: payload.temperature,
+                humidity: payload.humidity,
+                heart_rate: payload.heart_rate
+            }
+        };
+
+        const response = await fetch(
+            apiBase + "/whatif",
+            {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify(requestBody)
+            }
+        );
+
+        if (!response.ok) {
+            throw new Error(
+                "HTTP " + response.status
+            );
+        }
+
+        const result = await response.json();
+
+        $("whatifResult").textContent =
+            JSON.stringify(result, null, 2);
+
+    } catch (e) {
+
+        console.error("What-if error:", e);
+
+        $("whatifResult").textContent =
+            "What-if endpoint unavailable.";
+    }
+};
 
 fetchData();
-
-
-// ------------------------------------------------------------
-// AUTOMATIC REFRESH
-// Every 5 seconds
-// ------------------------------------------------------------
 
 setInterval(
     fetchData,
