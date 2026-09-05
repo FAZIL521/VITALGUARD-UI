@@ -1,105 +1,940 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>VITALGUARD AI</title>
-  <link rel="stylesheet" href="assets/styles.css" />
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>VITALGUARD AI Command Center</title>
+  <link rel="stylesheet" href="assets/styles.css">
 </head>
+
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand"><div class="shield">🛡️</div><div><h1>VITALGUARD</h1><span>AI Health Intelligence</span></div></div>
-      <nav>
-        <a class="active" href="#dashboard">⌂ Dashboard</a>
-        <a href="#sensors">◉ Live Sensors</a>
-        <a href="#risk">⚠ Risk Analysis</a>
-        <a href="#forecast">⌁ Forecast</a>
-        <a href="#whatif">↗ What‑If</a>
-        <a href="#recommendations">✦ Recommendations</a>
-      </nav>
-      <div class="api-box">
-        <div class="small">BACKEND</div>
-        <div id="apiStatus" class="status-dot-row"><span class="dot offline"></span><span>Checking API...</span></div>
-        <input id="apiUrl" value="http://127.0.0.1:8000" />
-        <button class="secondary" id="saveApi">Save API URL</button>
+
+<div class="app-shell">
+
+  <!-- ================= SIDEBAR ================= -->
+  <aside class="sidebar">
+
+    <div class="brand">
+      <div class="shield">🛡️</div>
+      <div>
+        <h1>VITALGUARD</h1>
+        <span>AI Health Intelligence</span>
       </div>
-    </aside>
+    </div>
 
-    <main>
-      <header>
-        <div><p class="eyebrow">REAL-TIME MONITORING</p><h2>VITALGUARD AI Command Center</h2></div>
-        <div class="header-actions">
-          <span id="lastUpdated">Waiting for data</span>
-          <button id="demoBtn">Demo Mode</button>
-          <button class="primary" id="refreshBtn">↻ Refresh</button>
+    <nav id="mainNav">
+      <a class="active" href="#dashboard" data-section="dashboard">
+        ⌂ <span>Dashboard</span>
+      </a>
+
+      <a href="#sensors" data-section="sensors">
+        ◉ <span>Live Sensors</span>
+      </a>
+
+      <a href="#risk" data-section="risk">
+        ⚠ <span>Risk Analysis</span>
+      </a>
+
+      <a href="#emergencyAlerts">
+        🚨 <span>Emergency Alerts</span>
+      </a>
+
+      <a href="#forecast" data-section="forecast">
+        ⌁ <span>Forecast</span>
+      </a>
+
+      <a href="#whatif" data-section="whatif">
+        ↗ <span>What-If</span>
+      </a>
+
+      <a href="#recommendations" data-section="recommendations">
+        ✦ <span>Recommendations</span>
+      </a>
+    </nav>
+
+    <div class="api-box">
+      <div class="small">BACKEND</div>
+
+      <div id="apiStatus" class="status-dot-row">
+        <span class="dot offline"></span>
+        <span>Checking API...</span>
+      </div>
+
+      <input
+        id="apiUrl"
+        value="https://vitalguard-ai-backend.onrender.com"
+        aria-label="Backend API URL"
+      >
+
+      <button class="secondary" id="saveApi">
+        Save API URL
+      </button>
+    </div>
+
+  </aside>
+
+
+  <!-- ================= MAIN ================= -->
+  <main>
+
+    <!-- HEADER -->
+    <header>
+
+      <div>
+        <p class="eyebrow">REAL-TIME MONITORING</p>
+        <h2>VITALGUARD AI Command Center</h2>
+      </div>
+
+      <div class="header-actions">
+        <span id="lastUpdated">Waiting for data</span>
+
+        <button id="demoBtn">
+          Demo Mode
+        </button>
+
+        <button class="primary" id="refreshBtn">
+          ↻ Refresh
+        </button>
+      </div>
+
+    </header>
+
+
+    <!-- ================= DASHBOARD ================= -->
+    <section
+      class="hero"
+      id="dashboard"
+      data-nav="dashboard"
+    >
+
+      <div>
+
+        <span class="live-pill">
+          <i></i> LIVE SYSTEM
+        </span>
+
+        <h3>
+          Connected health and environment intelligence
+        </h3>
+
+        <p>
+          Personal baseline, environmental context, signal quality
+          and transparent risk reasoning in one view.
+        </p>
+
+        <div class="hero-actions">
+
+          <button
+            class="primary"
+            data-scroll="risk"
+          >
+            View Risk Analysis
+          </button>
+
+          <button data-scroll="whatif">
+            Run What-If
+          </button>
+
         </div>
-      </header>
 
-      <section class="hero" id="dashboard">
+      </div>
+
+
+      <div class="overall-risk">
+
+        <span>OVERALL RISK</span>
+
+        <strong id="overallRisk">
+          --
+        </strong>
+
+        <small id="overallConfidence">
+          Confidence: --
+        </small>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= LIVE SENSORS ================= -->
+    <section
+      class="section-anchor"
+      id="sensors"
+      data-nav="sensors"
+    >
+
+      <div class="section-title">
+
         <div>
-          <span class="live-pill"><i></i> LIVE SYSTEM</span>
-          <h3>Connected health and environment intelligence</h3>
-          <p>Hardware sensors and rPPG observations are visualized here when your backend publishes live data.</p>
+          <p class="eyebrow">LIVE INPUTS</p>
+          <h3>Live Sensors</h3>
         </div>
-        <div class="overall-risk">
-          <span>OVERALL RISK</span>
-          <strong id="overallRisk">--</strong>
-          <small id="overallConfidence">Confidence: --</small>
-        </div>
-      </section>
 
-      <section class="grid metrics" id="sensors">
-        <article class="card"><span class="icon">♥</span><div><p>Heart Rate</p><h3 id="heartRate">-- <small>bpm</small></h3><span id="rppgStatus">rPPG waiting</span></div></article>
-        <article class="card"><span class="icon">◌</span><div><p>Temperature</p><h3 id="temperature">-- <small>°C</small></h3><span id="tempSource">Hardware waiting</span></div></article>
-        <article class="card"><span class="icon">💧</span><div><p>Humidity</p><h3 id="humidity">-- <small>%</small></h3><span>Environment sensor</span></div></article>
-        <article class="card"><span class="icon">🔥</span><div><p>Heat Index</p><h3 id="heatIndex">-- <small>°C</small></h3><span>Calculated / sensor data</span></div></article>
-      </section>
+        <span
+          class="badge neutral"
+          id="dataSourceBadge"
+        >
+          SIMULATED
+        </span>
 
-      <section class="grid two">
-        <article class="panel hardware">
-          <div class="panel-head"><div><p class="eyebrow">CONNECTIONS</p><h3>Hardware & AI Sources</h3></div><span id="hardwareBadge" class="badge neutral">Unknown</span></div>
-          <div class="connection-row"><span class="dot" id="espDot"></span><div><strong>ESP32 + Environment Sensor</strong><small id="espText">Waiting for backend</small></div></div>
-          <div class="connection-row"><span class="dot" id="rppgDot"></span><div><strong>Camera rPPG Observation</strong><small id="rppgText">Waiting for backend</small></div></div>
-          <div class="connection-row"><span class="dot" id="fusionDot"></span><div><strong>Sensor Fusion Engine</strong><small id="fusionText">Waiting for backend</small></div></div>
-        </article>
+      </div>
 
-        <article class="panel" id="risk">
-          <div class="panel-head"><div><p class="eyebrow">AI DECISION</p><h3>Risk Assessment</h3></div></div>
-          <div class="risk-layout">
-            <div class="gauge"><div class="gauge-inner"><strong id="riskScore">--</strong><span>/ 100</span></div></div>
-            <div><h4 id="riskLabel">No assessment yet</h4><p id="riskExplanation">Connect the FastAPI backend and publish sensor/rPPG observations.</p><div class="confidence-bar"><span id="confidenceFill"></span></div><small id="confidenceText">Confidence: --</small></div>
+
+      <div class="grid metrics">
+
+        <article class="card">
+          <span class="icon">♥</span>
+
+          <div>
+            <p>Heart Rate</p>
+
+            <h3 id="heartRate">
+              -- <small>bpm</small>
+            </h3>
+
+            <span id="rppgStatus">
+              rPPG waiting
+            </span>
           </div>
         </article>
-      </section>
 
-      <section class="grid two">
-        <article class="panel" id="forecast">
-          <div class="panel-head"><div><p class="eyebrow">FORECAST</p><h3>Predicted Trend</h3></div></div>
-          <div id="forecastContent" class="empty">No forecast available yet.</div>
-        </article>
-        <article class="panel" id="recommendations">
-          <div class="panel-head"><div><p class="eyebrow">GUIDANCE</p><h3>Recommendations</h3></div></div>
-          <ul id="recommendationList" class="recommendations"><li>Waiting for AI recommendations...</li></ul>
-        </article>
-      </section>
 
-      <section class="panel whatif" id="whatif">
-        <div class="panel-head"><div><p class="eyebrow">SIMULATION</p><h3>What‑If Analysis</h3></div><button class="primary" id="simulateBtn">Run Simulation</button></div>
-        <div class="controls">
-          <label>Temperature <input id="wiTemp" type="range" min="15" max="50" value="30"><output id="wiTempOut">30°C</output></label>
-          <label>Humidity <input id="wiHumidity" type="range" min="10" max="100" value="60"><output id="wiHumidityOut">60%</output></label>
-          <label>Heart Rate <input id="wiHr" type="range" min="40" max="180" value="75"><output id="wiHrOut">75 bpm</output></label>
+        <article class="card">
+          <span class="icon">◌</span>
+
+          <div>
+            <p>Body Temperature</p>
+
+            <h3 id="bodyTemperature">
+              -- <small>°C</small>
+            </h3>
+
+            <span>
+              Contact/skin-proximal reading
+            </span>
+          </div>
+        </article>
+
+
+        <article class="card">
+          <span class="icon">◎</span>
+
+          <div>
+            <p>SpO₂</p>
+
+            <h3 id="spo2">
+              -- <small>%</small>
+            </h3>
+
+            <span>
+              Oxygen saturation input
+            </span>
+          </div>
+        </article>
+
+
+        <article class="card">
+          <span class="icon">🌡️</span>
+
+          <div>
+            <p>Ambient Temperature</p>
+
+            <h3 id="temperature">
+              -- <small>°C</small>
+            </h3>
+
+            <span id="tempSource">
+              Environment sensor
+            </span>
+          </div>
+        </article>
+
+
+        <article class="card">
+          <span class="icon">💧</span>
+
+          <div>
+            <p>Humidity</p>
+
+            <h3 id="humidity">
+              -- <small>%</small>
+            </h3>
+
+            <span>
+              Environment sensor
+            </span>
+          </div>
+        </article>
+
+
+        <article class="card">
+          <span class="icon">🔥</span>
+
+          <div>
+            <p>Heat Index</p>
+
+            <h3 id="heatIndex">
+              -- <small>°C</small>
+            </h3>
+
+            <span>
+              Calculated / sensor data
+            </span>
+          </div>
+        </article>
+
+
+        <article class="card">
+          <span class="icon">🏃</span>
+
+          <div>
+            <p>Activity</p>
+
+            <h3 id="activityLevel">
+              --
+            </h3>
+
+            <span>
+              Current activity context
+            </span>
+          </div>
+        </article>
+
+
+        <article class="card">
+          <span class="icon">◉</span>
+
+          <div>
+            <p>Signal Quality</p>
+
+            <h3 id="signalQuality">
+              -- <small>%</small>
+            </h3>
+
+            <span>
+              Combined prototype confidence
+            </span>
+          </div>
+        </article>
+
+      </div>
+
+
+      <div class="grid two">
+
+        <!-- HARDWARE -->
+        <article class="panel hardware">
+
+          <div class="panel-head">
+
+            <div>
+              <p class="eyebrow">CONNECTIONS</p>
+              <h3>Hardware & AI Sources</h3>
+            </div>
+
+            <span
+              id="hardwareBadge"
+              class="badge neutral"
+            >
+              Unknown
+            </span>
+
+          </div>
+
+
+          <div class="connection-row">
+
+            <span
+              class="dot"
+              id="espDot"
+            ></span>
+
+            <div>
+              <strong>
+                ESP32 + Environment Sensor
+              </strong>
+
+              <small id="espText">
+                Waiting for backend
+              </small>
+            </div>
+
+          </div>
+
+
+          <div class="connection-row">
+
+            <span
+              class="dot"
+              id="rppgDot"
+            ></span>
+
+            <div>
+              <strong>
+                Camera rPPG Observation
+              </strong>
+
+              <small id="rppgText">
+                Waiting for backend
+              </small>
+            </div>
+
+          </div>
+
+
+          <div class="connection-row">
+
+            <span
+              class="dot"
+              id="fusionDot"
+            ></span>
+
+            <div>
+              <strong>
+                Sensor Fusion Engine
+              </strong>
+
+              <small id="fusionText">
+                Waiting for backend
+              </small>
+            </div>
+
+          </div>
+
+        </article>
+
+
+        <!-- OBSERVATION -->
+        <article class="panel">
+
+          <div class="panel-head">
+
+            <div>
+              <p class="eyebrow">CURRENT STATE</p>
+              <h3>Observation Summary</h3>
+            </div>
+
+          </div>
+
+
+          <div class="summary-grid">
+
+            <div>
+              <span>Timestamp</span>
+              <strong id="observationTime">--</strong>
+            </div>
+
+            <div>
+              <span>Data source</span>
+              <strong id="observationSource">--</strong>
+            </div>
+
+            <div>
+              <span>rPPG quality</span>
+              <strong id="rppgQuality">--</strong>
+            </div>
+
+            <div>
+              <span>Sensor quality</span>
+              <strong id="sensorQuality">--</strong>
+            </div>
+
+          </div>
+
+        </article>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= RISK ================= -->
+    <section
+      class="panel section-anchor"
+      id="risk"
+      data-nav="risk"
+    >
+
+      <div class="panel-head">
+
+        <div>
+          <p class="eyebrow">AI DECISION</p>
+          <h3>Risk Analysis</h3>
         </div>
-        <div id="whatifResult" class="empty">Adjust values and run a simulation.</div>
-      </section>
 
-      <section class="panel">
-        <div class="panel-head"><div><p class="eyebrow">RAW OBSERVATION</p><h3>Latest Backend Payload</h3></div></div>
+        <span
+          id="riskLevelBadge"
+          class="badge neutral"
+        >
+          WAITING
+        </span>
+
+      </div>
+
+
+      <div class="risk-layout">
+
+        <div class="gauge">
+
+          <div class="gauge-inner">
+
+            <strong id="riskScore">
+              --
+            </strong>
+
+            <span>
+              / 100
+            </span>
+
+          </div>
+
+        </div>
+
+
+        <div class="risk-copy">
+
+          <h4 id="riskLabel">
+            No assessment yet
+          </h4>
+
+          <p id="riskExplanation">
+            Connect the backend and publish sensor observations.
+          </p>
+
+          <div class="confidence-bar">
+            <span id="confidenceFill"></span>
+          </div>
+
+          <small id="confidenceText">
+            Confidence: --
+          </small>
+
+        </div>
+
+      </div>
+
+
+      <div class="risk-details">
+
+        <div>
+
+          <h4>
+            Why this score?
+          </h4>
+
+          <div
+            id="reasonList"
+            class="reason-list"
+          >
+            <div class="empty">
+              Waiting for risk factors.
+            </div>
+          </div>
+
+        </div>
+
+
+        <div>
+
+          <h4>
+            Decision bands
+          </h4>
+
+          <div class="band-grid">
+
+            <div>
+              <b>0–24</b>
+              <span>LOW</span>
+            </div>
+
+            <div>
+              <b>25–49</b>
+              <span>MODERATE</span>
+            </div>
+
+            <div>
+              <b>50–74</b>
+              <span>HIGH</span>
+            </div>
+
+            <div>
+              <b>75–100</b>
+              <span>CRITICAL</span>
+            </div>
+
+          </div>
+
+          <p class="note">
+            Prototype decision bands only —
+            not medical diagnostic thresholds.
+          </p>
+
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= EMERGENCY ALERTS ================= -->
+    <section
+      class="panel emergency-panel"
+      id="emergencyAlerts"
+    >
+
+      <div class="panel-head">
+
+        <div>
+
+          <p class="eyebrow">
+            SAFETY RESPONSE
+          </p>
+
+          <h3>
+            Emergency Alerts
+          </h3>
+
+          <p class="muted">
+            Automatic alert generated from the
+            current VITALGUARD risk assessment.
+          </p>
+
+        </div>
+
+
+        <span
+          id="alertStatusBadge"
+          class="badge neutral"
+        >
+          MONITORING
+        </span>
+
+      </div>
+
+
+      <!-- ALERT DISPLAY -->
+      <div
+        id="emergencyAlertBox"
+        class="emergency-alert-box safe"
+      >
+
+        <div class="alert-icon">
+          🚨
+        </div>
+
+
+        <div class="alert-content">
+
+          <h4 id="alertTitle">
+            No emergency alert
+          </h4>
+
+          <p id="alertMessage">
+            VITALGUARD is continuously monitoring
+            the current risk state.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <!-- ALERT BUTTONS -->
+      <div class="alert-actions">
+
+        <button
+          class="primary"
+          id="testAlertBtn"
+        >
+          Test Emergency Alert
+        </button>
+
+        <button
+          id="clearAlertBtn"
+        >
+          Clear Alert
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= FORECAST ================= -->
+    <section
+      class="grid two section-anchor"
+      id="forecast"
+      data-nav="forecast"
+    >
+
+      <article class="panel">
+
+        <div class="panel-head">
+
+          <div>
+            <p class="eyebrow">FORECAST</p>
+            <h3>Predicted Trend</h3>
+          </div>
+
+          <span class="badge neutral">
+            SHORT TERM
+          </span>
+
+        </div>
+
+        <div
+          id="forecastChart"
+          class="forecast-chart"
+        >
+          <div class="empty">
+            No forecast available yet.
+          </div>
+        </div>
+
+      </article>
+
+
+      <article class="panel">
+
+        <div class="panel-head">
+
+          <div>
+            <p class="eyebrow">INTERPRETATION</p>
+            <h3>Trend Summary</h3>
+          </div>
+
+        </div>
+
+
+        <div
+          id="forecastSummary"
+          class="forecast-summary"
+        >
+          Waiting for forecast data.
+        </div>
+
+
+        <div class="mini-stats">
+
+          <div>
+            <span>Current</span>
+            <strong id="forecastCurrent">--</strong>
+          </div>
+
+          <div>
+            <span>10 min</span>
+            <strong id="forecast10">--</strong>
+          </div>
+
+          <div>
+            <span>30 min</span>
+            <strong id="forecast30">--</strong>
+          </div>
+
+        </div>
+
+      </article>
+
+    </section>
+
+
+    <!-- ================= WHAT IF ================= -->
+    <section
+      class="panel section-anchor whatif"
+      id="whatif"
+      data-nav="whatif"
+    >
+
+      <div class="panel-head">
+
+        <div>
+
+          <p class="eyebrow">
+            SIMULATION
+          </p>
+
+          <h3>
+            What-If Analysis
+          </h3>
+
+          <p class="muted">
+            Change conditions and see how the
+            prototype risk engine responds.
+          </p>
+
+        </div>
+
+
+        <button
+          class="primary"
+          id="simulateBtn"
+        >
+          Run Simulation
+        </button>
+
+      </div>
+
+
+      <div class="controls">
+
+        <label>
+          Temperature
+
+          <input
+            id="wiTemp"
+            type="range"
+            min="15"
+            max="50"
+            value="30"
+          >
+
+          <output id="wiTempOut">
+            30°C
+          </output>
+
+        </label>
+
+
+        <label>
+          Humidity
+
+          <input
+            id="wiHumidity"
+            type="range"
+            min="10"
+            max="100"
+            value="60"
+          >
+
+          <output id="wiHumidityOut">
+            60%
+          </output>
+
+        </label>
+
+
+        <label>
+          Heart Rate
+
+          <input
+            id="wiHr"
+            type="range"
+            min="40"
+            max="180"
+            value="75"
+          >
+
+          <output id="wiHrOut">
+            75 bpm
+          </output>
+
+        </label>
+
+      </div>
+
+
+      <div
+        id="whatifResult"
+        class="result-card"
+      >
+        <div class="empty">
+          Adjust values and run a simulation.
+        </div>
+      </div>
+
+
+      <div class="scenario-row">
+
+        <button data-scenario="cooler">
+          Cooler environment
+        </button>
+
+        <button data-scenario="rest">
+          Rest + lower HR
+        </button>
+
+        <button data-scenario="hot">
+          Hot + humid
+        </button>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= RECOMMENDATIONS ================= -->
+    <section
+      class="panel section-anchor"
+      id="recommendations"
+      data-nav="recommendations"
+    >
+
+      <div class="panel-head">
+
+        <div>
+          <p class="eyebrow">
+            GUIDANCE
+          </p>
+
+          <h3>
+            Recommendations
+          </h3>
+        </div>
+
+      </div>
+
+
+      <div
+        id="recommendationCards"
+        class="recommendation-cards"
+      >
+
+        <div class="empty">
+          Waiting for AI recommendations.
+        </div>
+
+      </div>
+
+    </section>
+
+
+    <!-- ================= DEVELOPER VIEW ================= -->
+    <section class="panel">
+
+      <details>
+
+        <summary>
+          Developer view — latest backend payload
+        </summary>
+
         <pre id="rawData">{}</pre>
-      </section>
-    </main>
-  </div>
-  <script src="assets/app.js"></script>
+
+      </details>
+
+    </section>
+
+
+    <!-- ================= FOOTER ================= -->
+    <footer>
+
+      <span>
+        VITALGUARD AI • Prototype
+      </span>
+
+      <span>
+        Risk output is an engineering prototype,
+        not a diagnosis.
+      </span>
+
+    </footer>
+
+  </main>
+
+</div>
+
+
+<script src="assets/app.js"></script>
+
 </body>
 </html>
